@@ -1,113 +1,93 @@
-# TinyZero
-![image](cover.png)
+# 推理大模型，推理能力根本原因来自于不断反思
+## 推理大模型的本质
+- 推理大模型的本质是不断反思，不断修正，不断优化，不断提高
+我在尝试复现deepseek-r1推理能力时发现,在单个任务强化学习，无法形成很强推理能力，而且会训练次数越多，能力倒退现象。
+在分析deepseek-r1的推理过程，发现推理模式，呈现思考，反思，思考反思模型。
+在deepseek-r1的技术文档中，说出现了"啊哈moment",这个也是反思的表现。反思多了，就会出现顿悟。
+依我的个人经验，解决复杂任务时，我们需要不断试错，不断吸取经验教训，这样形成正向反馈，从错误中学习，不断提高.这样就不断在提高正确性的概率。
+好关键的来了，下面就是提示词
+SYSTEM_PROMPT = """
+你是一个专业的问题解决AI助手，遵循严格的响应格式。当遇到问题时，请：
+先进行深度推理(<think>标签内)
+反思总结(<reflect>标签内)
+进行深度推理(<think>标签内)
+反思总结(<reflect>标签内)
+进行深度推理(<think>标签内)
+反思总结(<reflect>标签内)
+进行深度推理(<think>标签内)
+反思总结(<reflect>标签内)
+...直到有准确答案
+给出答案(<answer>标签内)
 
-TinyZero is a reproduction of [DeepSeek R1 Zero](https://github.com/deepseek-ai/DeepSeek-R1) in countdown and multiplication tasks. We built upon [veRL](https://github.com/volcengine/verl).
+请按照以下格式进行回应：
+<think>\n...\n</think>\n<reflect>\n...\n</reflect>\n<think>\n...\n</think>\n<reflect>\n...\n</reflect>\n...<answer>\n...\n</answer>
+"""
 
-Through RL, the 3B base LM develops self-verification and search abilities all on its own 
+思考的例子:
+<think>
+为了使数字 [52, 19, 86] 相加得到 53，我们可以尝试使用减法和加法来构造这个等式。可能的思路是使用 52 - 19 = 33，然后加上 86 的某个部分来达到 53。
+</think>
+<reflect>
+我们已经尝试了减法和加法的组合，发现直接将52和86相减形成53的方法不成立。那么我们需要重新思考将19如何转换，使得最终相加的结果为53。
+</reflect>
+<think>
+我们可以尝试将19加上某个数使结果为52+某个数=53，因此需要52+1=53，这看起来并不需要使用86来构成等式，因此我们可以考虑直接将19减去86的结果加到52上。
+</think>
+<reflect>
+经尝试后，将19简化为52-86 + 19 的形式，但明确的是这种方法无法直接得到53。需要注意的是可能需要重新评估数字和操作符号。
+</reflect>
+<think>
+重新审视我们使用的数字 [52, 19, 86]。注意到19与86的差值为67，如果加上52得到52 + 67 = 119。这并没有帮助，但如果从86减去19，即86 - 19 = 67，然后将67加上52并没有直接达到53。因此，重新考量是否有其他组合方式。
+</think>
+<reflect>
+我们再次评估尝试，注意数字19和86的差值为67，与53有一定的距离。可能需要不同的操作符号来得到53。考虑是否存在其他有效的组合方式。
+</reflect>
+<think>
+通过更细致的分析，尝试52 - 19 = 33，然后将33 + 19的结果尝试结合86的其他组合形成53。
+</think>
+<reflect>
+通过上述尝试，我们发现将52 - 19 = 33，然后将此值与86相加，可得33 + 86 = 119，这就意味着我们无法直接用这些数字与加减运算达到53。需要再尝试其他组合方式。
+</reflect>
+<think>
+再次尝试通过调整19与86的组合，我们注意到19 + 52 - 86 的形式，让这个组合形成53：
+19 + 52 - 86 = 71 - 86。
+</think>
+<reflect>
+经过多轮尝试，我们发现将19和52相加形成71，并从71中减去86形成-15，显然这与53不符。
+</reflect>
+<think>
+最终尝试52 - 86 + 19。应用这些操作可得：
+52 - 86 + 19 = -34 + 19 = -15。这未达到53的期望值
+</think>
+<reflect>
+在重复这些组合尝试后，仍然未能得出53的结果。但如果我们重新审视给定的数字和操作。52 - 86 + 19 实际上应该倒过来看：
+19 - 86 + 52。将这些数字和运算重新排列。
+</reflect>
+<think>
+重新审查看52 - (86 - 19)。我们从52中减去86与19的差值，即：
+52 - (86 - 19) = 52 - 67 = -15。这样仍然达不到期望的53。
+</think>
+<reflect>
+再次试算了各种可能的计算方法，我们意识到方法仍然需要重新考虑使用19与86之间的差值来创建一个接近53的等式。
+</reflect>
+<think>
+更深入理解，我们应该考虑将52 + 19 的结果与86相加以达到更接近53的值。尝试：
+52 + 19 - 86 = 71 - 86 = -15 不行，调整下为：
+86 + 19 - 52 = 105 - 52 = 53
+</think>
+<reflect>
+重新评估将86与19相加得到105，然后从105中减去52，正好等于53。
+</reflect>
+<answer>
+86 + 19 - 52 = 53
+</answer>
 
-You can experience the Ahah moment yourself for < $30 
 
-Twitter thread: https://x.com/jiayi_pirate/status/1882839370505621655
+模型在不断试错中，不断进步，训练过程中，因为不断反思的原因，模型自己在修正自己的错误，下次回答会避免自己的错误。
+不断思考不断反思，这样的过程，动态形成了蒙特卡洛树，自己在不断在分析总结调整。
 
-Full experiment log: https://wandb.ai/jiayipan/TinyZero
+ai可以从自己的试错中不断学习进步，对各种可能性进行尝试反思。
+复杂问题，存在非常大的各种可能性，这些可能性,需要去试错确认。不断思考，不断反思，这样恰恰解决了问题。
+deepseek-r1提出了<think></think><answer></answer>模式，但这个模式不是导致模型推理能不断 提升的根本原因，根本原因来自模型的自我反思，自我改进。
 
-Paper's on it's way!
-
-## Installation
-
-```
-conda create -n zero python=3.9
-# install torch [or you can skip this step and let vllm to install the correct version for you]
-pip install torch==2.4.0 --index-url https://download.pytorch.org/whl/cu121
-# install vllm
-pip3 install vllm==0.6.3 # or you can install 0.5.4, 0.4.2 and 0.3.1
-pip3 install ray
-
-# verl
-pip install -e .
-
-# flash attention 2
-pip3 install flash-attn --no-build-isolation
-# quality of life
-pip install wandb IPython matplotlib
-```
-
-## Countdown task
-
-**Data Preparation**
-```
-conda activate zero
-python ./examples/data_preprocess/countdown.py --local_dir {path_to_your_dataset}
-```
-
-### Run Training
-```
-conda activate zero
-```
-
-For the following code, if you see Out-of-vram, try add `critic.model.enable_gradient_checkpointing=True` to the script, and checkout the discussion [here](https://github.com/Jiayi-Pan/TinyZero/issues/5#issuecomment-2624161643)
-
-**Single GPU**
-
-
-Works for model <= 1.5B. For Qwen2.5-0.5B base, we know it fails to learn reasoning.
-
-```
-export N_GPUS=1
-export BASE_MODEL={path_to_your_model}
-export DATA_DIR={path_to_your_dataset}
-export ROLLOUT_TP_SIZE=1
-export EXPERIMENT_NAME=countdown-qwen2.5-0.5b
-export VLLM_ATTENTION_BACKEND=XFORMERS
-
-bash ./scripts/train_tiny_zero.sh
-```
-
-**3B+ model**
-In this case, the base model is able to develop sophisticated reasoning skills.
-```
-export N_GPUS=2
-export BASE_MODEL={path_to_your_model}
-export DATA_DIR={path_to_your_dataset}
-export ROLLOUT_TP_SIZE=2
-export EXPERIMENT_NAME=countdown-qwen2.5-3b
-export VLLM_ATTENTION_BACKEND=XFORMERS
-
-bash ./scripts/train_tiny_zero.sh
-```
-
-### Instruct Ablation
-We experiment with QWen-2.5-3B Instruct too.
-**Data Preparation**
-To follow chat template, we need to reprocess the data:
-```
-conda activate zero
-python examples/data_preprocess/countdown.py --template_type=qwen-instruct --local_dir={path_to_your_dataset}
-```
-
-**Training**
-```
-export N_GPUS=2
-export BASE_MODEL={path_to_your_model}
-export DATA_DIR={path_to_your_dataset}
-export ROLLOUT_TP_SIZE=2
-export EXPERIMENT_NAME=countdown-qwen2.5-3b-instruct
-export VLLM_ATTENTION_BACKEND=XFORMERS
-
-bash ./scripts/train_tiny_zero.sh
-```
-
-## Acknowledge
-* We run our experiments based on [veRL](https://github.com/volcengine/verl).
-* We use Qwen2.5 series base model [Qwen2.5](https://github.com/QwenLM/Qwen2.5).
-
-## Citation
-```
-@misc{tinyzero,
-author       = {Jiayi Pan and Junjie Zhang and Xingyao Wang and Lifan Yuan and Hao Peng and Alane Suhr},
-title        = {TinyZero},
-howpublished = {https://github.com/Jiayi-Pan/TinyZero},
-note         = {Accessed: 2025-01-24},
-year         = {2025}
-}
-```
+这样的模式可以在高度复杂，但数据集小，去训练模型推理能力。这也正是我需要的。现实的复杂性，长尾场景特别多，我们没有足够的数据，现在我们可以让模型在不断试错中学习，去解决我们长尾场景的问题。
